@@ -1,8 +1,11 @@
 # radiomics-tools
-Python snippets that are helpful for doing radiomics analysis on medical images.  Operations include the following:
+Python snippets that for doing radiomics analysis on medical images.  Operations include the following:
 * Read/write DICOM and NIfTI files (using pydicom[[1]](#1) and NiBabel[[2]](#2))
 * Rasterize ImageJ[[2]](#2) contours (using read_roi[[3]](#3))
 * Generate .CSV files of radiomics statistics from NIfTI images and masks (using pyradiomics[[4]](#4))
+
+**Emphatic Caveat (!)**:
+No attempt has been made to exhaustively test these tools on a sample of different variations of images and ROIs from different sources.  These are just tools that *I* have developed for my own use on radiomics projects.  These scripts are posted on GitHub not for distribution, but rather just for research transparency and accountability.  But please help yourself, if there's anything in here that you find useful.
 
 ### imagej_rois_to_nifti
 

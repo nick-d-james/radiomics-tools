@@ -4,7 +4,7 @@
  Created on June 27, 2021
  Copyright 2021 - Nick D. James
 
-Rasterizes a sequence of ImageJ-drawn contours for a stack of 2D DICOM images.  The corresponding stack of 2D masks
+Converts a stack of DICOM images and Rasterizes a sequence of ImageJ-drawn contours for a stack of 2D DICOM images.  The corresponding stack of 2D masks
 is saved as a NIfTI1 .nii.gz file.  The rasterization is done according to the given directory of images.  One mask
 (of matching dimensions) is created for each image.  A "blank" mask is created for images lacking a corresponding roi
 in the .zip file.  The default background value for masks is configurable (default: 0).
@@ -26,6 +26,7 @@ from read_roi import read_roi_zip
 from zipfile import BadZipFile
 import skimage.draw
 import nibabel as nib
+import dicom2nifti
 import subprocess
 
 
@@ -117,17 +118,18 @@ def roi_to_mask(roi_record, img, region_of_boredom_value=0):
     if roi_record_type == "freehand":
         
         # Get the x,y-coords of all points inside ROI
-        c, r = np.asarray(roi_record['x']), np.asarray(roi_record['y'])
+        r, c = np.asarray(roi_record['x']), np.asarray(roi_record['y'])
         mask[skimage.draw.polygon(r, c)] = 1
     
     elif roi_record_type == "oval":
+        logging.warning("Oval ROI to NIfTI is untested.  Check " + roi_record['name'] + " carefully!")
         top, left = roi_record['top'], roi_record['left']
         width, height = roi_record['width'], roi_record['height']
         
         # ImageJ puts y=0 at the top of the image
-        r_radius, c_radius = height // 2, width // 2
-        r, c = top + r_radius, left + c_radius
-        mask[skimage.draw.ellipse(r=r, c=c, r_radius=r_radius, c_radius=c_radius)] = 1
+        h_radius, w_radius = height // 2, width // 2
+        c, r = top + h_radius, left + w_radius
+        mask[skimage.draw.ellipse(r=r, c=c, r_radius=h_radius, c_radius=w_radius)] = 1
     
     # A "composite" contour is a dict with a list of paths (roi_record['paths']).
     # Each path is a list of (x,y) pairs.
@@ -135,7 +137,7 @@ def roi_to_mask(roi_record, img, region_of_boredom_value=0):
     elif roi_record_type == 'composite':
         for p in roi_record['paths']:
             p = np.asarray(p)
-            c, r = np.asarray(p)[:, 0], np.asarray(p)[:, 1]
+            r, c = np.asarray(p)[:, 0], np.asarray(p)[:, 1]
             mask[skimage.draw.polygon(r, c)] = 1
     else:
         logging.error("Unrecognized ROI record type: \"%s\"",
@@ -203,6 +205,10 @@ def mask_arr_to_nifti1_file(mask_arr, zip_file, output_path):
     :param zip_file: path to ImageJ ROI .zip file
     :param output_path: path to output nifti file
     """
+    # affine = np.zeros((4, 4))
+    # affine[0, 1] = -1
+    # affine[1, 0] = affine[2, 2] = affine[3, 3] = 1
+    # nifti_img = nib.Nifti1Image(mask_arr, affine=affine)
     nifti_img = nib.Nifti1Image(mask_arr, affine=np.eye(4))
     output_file = os.path.join(output_path, os.path.split(os.path.splitext(zip_file)[0])[1]) + ".nii.gz"
     nib.save(nifti_img, output_file)
@@ -224,8 +230,13 @@ def main(dicom_dir, roi_zip_path, output_dir):
     # Create the X x Y x Z numpy array of masks
     mask_arr = rois_to_mask_stack(ordd_dict, dicom_dir, dcm_seq)
     
-    # Write NIfTI file
+    # Write NIfTI file containing the masks
     mask_arr_to_nifti1_file(mask_arr, roi_zip_path, output_dir)
+    
+    # Write NIfTI file containing the images
+    image_dir_name = os.path.split(dicom_dir)[-1]
+    images_file = os.path.join(output_dir, image_dir_name + ".nii.gz")
+    dicom2nifti.dicom_series_to_nifti(dicom_dir, images_file, reorient_nifti=False)
 
 
 def usage():
