@@ -2,7 +2,7 @@
 """
 ---===[ imagej_rois_to_nifti: radiomics-tools ]===---
  Created on June 27, 2021
- Copyright 2021 - Nick D. James
+ Copyright 2021 - Nick D. James and Rebecca E. Thornhill
 
 Converts a stack of DICOM images and Rasterizes a sequence of ImageJ-drawn contours for a stack of 2D DICOM images.  The corresponding stack of 2D masks
 is saved as a NIfTI1 .nii.gz file.  The rasterization is done according to the given directory of images.  One mask
